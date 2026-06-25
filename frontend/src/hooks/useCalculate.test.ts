@@ -44,4 +44,29 @@ describe("useCalculate", () => {
     expect(calculateEquation).toHaveBeenCalledWith("1+1");
     expect(result.current.state.result).toBe("2");
   });
+
+  it("resets to idle and clears result when typing after success", async () => {
+    const { result } = renderHook(() => useCalculate());
+
+    act(() => {
+      result.current.handleInput("1");
+      result.current.handleInput("+");
+      result.current.handleInput("1");
+    });
+
+    await act(async () => {
+      result.current.handleInput("EQUALS");
+    });
+
+    await waitFor(() => expect(result.current.state.status).toBe("success"));
+    expect(result.current.state.result).toBe("2");
+
+    act(() => {
+      result.current.handleInput("2");
+    });
+
+    expect(result.current.state.status).toBe("idle");
+    expect(result.current.state.result).toBeNull();
+    expect(result.current.state.equation).toBe("1+12");
+  });
 });

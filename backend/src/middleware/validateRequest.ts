@@ -15,12 +15,10 @@ export function validateCalculateBody(
   }
 
   if (typeof equation !== "string") {
-    res
-      .status(422)
-      .json({
-        error: "Invalid field type",
-        detail: '"equation" must be a string',
-      });
+    res.status(422).json({
+      error: "Invalid field type",
+      detail: '"equation" must be a string',
+    });
     return;
   }
 
