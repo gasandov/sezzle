@@ -1,5 +1,5 @@
 import { CalcButton } from "../atoms/CalcButton";
-import { BUTTON_LAYOUT } from "../utils/buttonLayout";
+import { BUTTON_LAYOUT } from "../../utils/buttonLayout";
 
 interface ButtonGridProps {
   disabled?: boolean;

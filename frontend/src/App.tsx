@@ -1,4 +1,4 @@
-import { Calculator } from "./organisms/Calculator";
+import { Calculator } from "./components/organisms/Calculator";
 
 export default function App() {
   return (

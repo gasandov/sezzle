@@ -1,9 +1,9 @@
 export type TokenType =
-  | 'NUMBER'
-  | 'OPERATOR'
-  | 'LEFT_PAREN'
-  | 'RIGHT_PAREN'
-  | 'FUNCTION';
+  | "NUMBER"
+  | "OPERATOR"
+  | "LEFT_PAREN"
+  | "RIGHT_PAREN"
+  | "FUNCTION";
 
 export interface Token {
   type: TokenType;
@@ -12,7 +12,7 @@ export interface Token {
 
 export interface OperatorMeta {
   precedence: number;
-  associativity: 'left' | 'right';
+  associativity: "left" | "right";
   arity: number;
 }
 

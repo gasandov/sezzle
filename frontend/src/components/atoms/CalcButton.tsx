@@ -1,4 +1,4 @@
-import { ButtonVariant } from "../types";
+import { ButtonVariant } from "../../types";
 
 interface CalcButtonProps {
   label: string;

@@ -1,7 +1,7 @@
-import { CalcStatus } from "../types";
+import { CalcStatus } from "../../types";
 import { DisplayLine } from "../atoms/DisplayLine";
 import { Spinner } from "../atoms/Spinner";
-import { formatEquation } from "../utils/formatEquation";
+import { formatEquation } from "../../utils/formatEquation";
 
 interface DisplayProps {
   equation: string;

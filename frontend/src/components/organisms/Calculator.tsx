@@ -1,7 +1,7 @@
 import { Display } from "../molecules/Display";
 import { ButtonGrid } from "../molecules/ButtonGrid";
-import { useCalculate } from "../hooks/useCalculate";
-import { useKeyboard } from "../hooks/useKeyboard";
+import { useCalculate } from "../../hooks/useCalculate";
+import { useKeyboard } from "../../hooks/useKeyboard";
 
 export function Calculator() {
   const { state, handleInput } = useCalculate();

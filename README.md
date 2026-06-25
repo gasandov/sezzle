@@ -162,9 +162,10 @@ sezzle/
 │   └── tests/unit/
 ├── frontend/
 │   └── src/
-│       ├── atoms/         CalcButton  DisplayLine  Spinner
-│       ├── molecules/     Display  ButtonGrid
-│       ├── organisms/     Calculator
+|       ├── components
+│       |   ├── atoms/         CalcButton  DisplayLine  Spinner
+│       |   ├── molecules/     Display  ButtonGrid
+│       |   ├── organisms/     Calculator
 │       ├── hooks/         useCalculate  useKeyboard
 │       └── utils/         api  buttonLayout  formatEquation
 ├── Dockerfile
