@@ -35,27 +35,58 @@ A production-grade full-stack calculator built as a monorepo with an API Gateway
 └──────────────────────────────────────────────────────┘
 ```
 
-### Why Shunting-Yard instead of `eval()`?
+---
 
-`eval()` and `Function()` are security vulnerabilities — they execute arbitrary JavaScript. The [Shunting-Yard Algorithm](https://en.wikipedia.org/wiki/Shunting-yard_algorithm) (Dijkstra, 1961) converts infix notation to Reverse Polish Notation (RPN) in O(n), correctly handling operator precedence (PEMDAS) and parentheses without touching the runtime. The evaluator then walks the RPN stack with simple arithmetic — zero attack surface.
+## Design Decisions & Assumptions
 
-### Why the microservice-style service split?
+### Parsing & Security
 
-`basicMathService` and `advMathService` are domain-isolated modules. The orchestrator (`calculatorService`) depends on abstractions, not implementations. This makes each arithmetic domain independently testable, replaceable (e.g. swap `advMathService` for a GPU-backed service), and auditable.
+| Decision                                                            | Rationale                                                                                                                                                     |
+| ------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **No `eval()`, `Function()`, or third-party expression evaluators** | String evaluation would execute arbitrary code. A custom parser eliminates injection risk entirely.                                                           |
+| **Allowlist regex before tokenization**                             | `calculatorService` rejects equations containing characters outside `[0-9+\-*/^().,% a-z]` before any parsing begins, providing a fast first line of defense. |
 
-### Frontend Component Hierarchy
+### Microservice Orchestration (Logical, Not Physical)
 
-```
-App
-└── Calculator (organism)
-    ├── Display (molecule)
-    │   ├── DisplayLine (atom)
-    │   └── Spinner (atom)
-    └── ButtonGrid (molecule)
-        └── CalcButton[] (atom)
-```
+The "microservice" split is **architectural, not infrastructural** — all services run in-process within a single Node.js process. This was a deliberate choice:
 
-Hooks are decoupled from UI: `useCalculate` owns all state and async logic; `useKeyboard` owns the global keyboard listener. The double-fire prevention (`skipNextEnterRef`) ensures clicking `=` with a mouse and then pressing Enter doesn't double-submit.
+- **`calculatorService`** acts as the orchestrator: it validates input, coordinates the parse pipeline, and maps domain errors to HTTP responses. It never performs arithmetic directly.
+- **`basicMathService`** owns `+`, `-`, `*`, `/` and throws a typed `DivisionByZeroError` on `/ 0`.
+- **`advMathService`** owns `pow`, `sqrt`, and `%`.
+
+This separation makes each domain independently testable and swappable (e.g. replacing `advMathService` with a WASM or remote implementation) without touching the parser or route layer. For a calculator of this scope, separate deployable services would add network latency and operational overhead with no proportional benefit.
+
+### API & Error Handling
+
+| Decision                                             | Detail                                                                                                                                                                                       |
+| ---------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Single endpoint: `POST /api/v1/calculate`**        | All calculation flows through one gateway endpoint, keeping the API surface minimal.                                                                                                         |
+| **`422 Unprocessable Entity` for all client errors** | Empty input, invalid characters, parse failures, division by zero, and non-finite results all return `422` with `{ error, detail }`. This distinguishes "bad input/math" from server faults. |
+| **`500`-class errors are unexpected only**           | Unhandled exceptions inside the orchestrator are logged via pino and returned as `{ error: "Internal error" }`.                                                                              |
+
+### Frontend
+
+| Decision                                             | Rationale                                                                                                                                                                                                                                         |
+| ---------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Atomic Design (atoms → molecules → organisms)**    | Keeps UI primitives reusable and testable in isolation. Display lines, buttons, and spinners are atoms; Display and ButtonGrid compose them; Calculator is the top-level organism.                                                                |
+| **Custom hook over TanStack Query**                  | `useCalculate` follows the react-query _pattern_ (dedicated async hook, loading/error/success states, decoupled from JSX) without adding a query-cache dependency. A calculator submits ephemeral, non-idempotent requests with no cache benefit. |
+| **Global `keydown` listener (not per-button focus)** | Ensures full keyboard support regardless of which element is focused. `preventDefault` is applied to `/`, `Backspace`, and `Enter` to stop browser navigation shortcuts.                                                                          |
+
+### DevOps & Runtime
+
+| Assumption                              | Detail                                                                                                                                                                                                                 |
+| --------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Single container on port 3000**       | The multi-stage Dockerfile builds frontend assets and backend JS separately, then copies static files into `dist/public`. Express serves the SPA and API from one port — no CORS configuration required in production. |
+| **npm workspaces monorepo**             | Root `package.json` orchestrates `backend` and `frontend` workspaces. Shared tooling scripts (`dev:backend`, `test`, etc.) live at the root.                                                                           |
+| **Node.js 20 Alpine**                   | Used in all Docker stages for a small image footprint and LTS stability.                                                                                                                                               |
+| **Dev: Vite on `:5173` with API proxy** | Hot module replacement during frontend development; production uses the unified container.                                                                                                                             |
+
+### Testing
+
+| Scope                           | Tooling                  | Focus                                                                                                            |
+| ------------------------------- | ------------------------ | ---------------------------------------------------------------------------------------------------------------- |
+| Backend parser & math engine    | Jest                     | Tokenizer edge cases, Shunting-Yard precedence/parentheses, division by zero, nested expressions, float rounding |
+| Frontend utilities & components | Vitest + Testing Library | `formatEquation`, button layout, display rendering, hook state transitions                                       |
 
 ---
 
