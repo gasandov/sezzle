@@ -36,50 +36,36 @@ export function useCalculate() {
     setState(INITIAL_STATE);
   }, []);
 
-  const calculate = useCallback(async () => {
+  const calculate = useCallback(() => {
     setState((prev) => {
-      if (!prev.equation.trim()) return prev;
+      const equation = prev.equation.trim();
+      if (!equation) return prev;
+
+      void (async () => {
+        try {
+          const { result } = await calculateEquation(equation);
+          setState((current) => ({
+            ...current,
+            result: formatResult(result),
+            status: "success",
+            errorMessage: null,
+          }));
+        } catch (err) {
+          const message =
+            err instanceof ApiError
+              ? err.detail
+              : "Something went wrong. Please try again.";
+          setState((current) => ({
+            ...current,
+            result: null,
+            status: "error",
+            errorMessage: message,
+          }));
+        }
+      })();
+
       return { ...prev, status: "loading", errorMessage: null };
     });
-
-    setState((prev) => {
-      if (!prev.equation.trim()) return prev;
-
-      // We kick off async work outside setState to avoid closure issues
-      return prev;
-    });
-
-    // Read current equation via functional update
-    let currentEquation = "";
-    setState((prev) => {
-      currentEquation = prev.equation;
-      return prev;
-    });
-
-    if (!currentEquation.trim()) return;
-
-    setState((prev) => ({ ...prev, status: "loading", errorMessage: null }));
-
-    try {
-      const { result } = await calculateEquation(currentEquation);
-      setState((prev) => ({
-        ...prev,
-        result: formatResult(result),
-        status: "success",
-        errorMessage: null,
-      }));
-    } catch (err) {
-      const message =
-        err instanceof ApiError
-          ? err.detail
-          : "Something went wrong. Please try again.";
-      setState((prev) => ({
-        ...prev,
-        result: null,
-        status: "error",
-        errorMessage: message,
-      }));
-    }
   }, []);
 
   const handleInput = useCallback(
